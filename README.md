@@ -59,7 +59,7 @@ Interpretation:
 - **score > 0** → Windows-leaning  
 - **score < 0** → MacOS-leaning  
 - **score ≈ 0** → neutral/ambiguous  
-> Score the **first sentence** only to reduce noise and keep outputs template-aligned.
+> Score the **first sentence** only to reduce noise and keep outputs consistent with the scoring templates.
 
 ### 4) Sampling Design (Repeated Runs)
 - Vary:
