@@ -1,8 +1,6 @@
 # llm_symbol_lab_test
 
-# Tipping Points in Fact-Grounded LLMs (Tool-Grounded vs. Direct Injection)
-
-![Python](https://img.shields.io/badge/Python-3.x-blue)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-orange)
 ![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow)
 ![SentenceTransformers](https://img.shields.io/badge/SentenceTransformers-Embeddings-brightgreen)
@@ -20,7 +18,7 @@
 ---
 
 ## 🧭 Project Overview
-Modern LLM applications often rely on **external context** (search/RAG/tools) to reduce hallucinations.  
+Modern LLM applications often rely on **external context** (search/RAG/tools) to improve factuality.
 However, if that external source is **biased or fallible**, model outputs can shift dramatically.
 
 This project investigates **tipping points**—the point where model behavior **flips** as biased context increases—and compares two grounding strategies:
@@ -33,113 +31,80 @@ We quantify response drift using **embedding similarity scoring** and analyze st
 ---
 
 ## 🎯 Research Questions
-1. **How does tipping behavior change** as biased external context increases?
-2. How do different **fact-grounding techniques** (direct prompt injection vs. tool-based context delivery) **modulate tipping dynamics**?
-3. Are **article bias scores** closely linked to **LLM output bias**, and do these relationships show structured patterns (e.g., clustering) in a network view?
+1. How does model behavior **change (and tip/flip)** as biased external context increases?
+2. How do **grounding mechanisms** (direct prompt injection vs. tool-grounded delivery) **affect tipping dynamics**?
+3. How strongly do **article bias scores** align with **LLM output bias**, and do we observe **clustered structure** in a network view?
 
 ---
 
 ## 🏗 Experimental Framework
 
 ### 1) Bias-Controlled External Context (Synthetic Articles)
-To precisely control context bias, we generate journalist-style synthetic articles across an **ordered bias scale**:
-- Standardized prompt + consistent tone/length for comparability  
-- Post-processing to remove prompt artifacts / meta-instructions  
-- Articles stored as structured inputs for downstream experiments  
-
-This design keeps bias strength as a clean experimental variable while avoiding time-intensive manual collection.
-
----
+- Generate journalist-style synthetic articles along an **ordered bias scale** using standardized prompts
+- Post-process to remove prompt artifacts / meta-instructions
+- Store articles as structured inputs for repeatable experiments
 
 ### 2) Grounding Strategies Compared (Delivery Mechanisms)
-We compare two ways of providing external context:
-
-**A. Tool-grounded context (mock tool calls)**  
-- Articles are provided as results from a **mock search tool**  
-- Simulates production-style tool-augmented workflows  
-
-**B. Direct prompt injection**  
-- Articles are provided directly in the user message as context  
-
-This isolates the effect of the delivery mechanism while holding article content constant.
-
----
+- **Tool-grounded context (mock tool calls):** articles delivered as simulated tool/search results (production-like)
+- **Direct prompt injection:** articles inserted directly into the user prompt  
+> The content is held constant to isolate the impact of the delivery mechanism. 
 
 ### 3) Embedding-Based Drift Scoring
-We quantify output drift via sentence embeddings + cosine similarity:
-
-- Candidate sentences represent binary decision points (e.g., “I like Windows” vs. “I like MacOS”)  
-- Encode candidates and model outputs using **SentenceTransformers `all-MiniLM-L6-v2`**  
-- Compute a single relative bias score:
+- Encode outputs and paired binary candidates using **SentenceTransformers `all-MiniLM-L6-v2`**
+- Compute a relative bias score:
 
 **score = sim(output, Windows_candidates) − sim(output, MacOS_candidates)**
 
 Interpretation:
-- **Positive** → Windows-leaning  
-- **Negative** → MacOS-leaning  
-- **Near zero** → neutral/ambiguous  
+- **score > 0** → Windows-leaning  
+- **score < 0** → MacOS-leaning  
+- **score ≈ 0** → neutral/ambiguous  
+> Score the **first sentence** only to reduce noise and keep outputs template-aligned.
 
-To improve scoring relevance, we score the **first sentence** of each model output (paired with prompting to encourage short, template-aligned responses).
-
----
-
-### 4) Sampling Design (Clusters + Repeated Runs)
-- Experiments sample **clusters of similar articles** to reduce confounds from conflicting sources  
-- Runs vary by:
-  - number of injected articles (1, 2, 3)  
-  - injection strategy (tool-grounded vs direct)  
-- Repeated runs under identical settings capture stochastic variability.
-
----
+### 4) Sampling Design (Repeated Runs)
+- Vary:
+  - number of injected articles (**1 / 2 / 3**)
+  - delivery mechanism (**tool-grounded vs direct**)
+- Repeat runs per setting to capture stochastic variability
 
 ### 5) Network Analysis & Visualization (NetworkX + Gephi)
-We visualize article–outcome dynamics as a graph:
+- Build a bipartite graph: **articles ↔ outcome score buckets** (e.g., 0.05 increments)
+- Compare structure against a random baseline and explore clustering in **Gephi**
 
-- **Nodes:** articles + bucketed outcome scores (e.g., 0.05 increments)  
-- **Edges:** an article connects to an outcome bucket when it appears in an observation yielding that outcome  
-
-We compare structure against a random baseline and use Gephi to explore bias-aligned clustering.
 
 ---
 
 ## 📈 Key Findings
+- **Non-linear tipping:** As article bias shifts, model preferences **flip** (MacOS → Windows), showing **non-linear tipping behavior** rather than smooth linear change.
+- **Tool-grounded context amplifies bias:** steeper tipping curves than direct injection  
+- **Network structure is not random:** bias-aligned clusters emerge (dense within-bias, sparse cross-bias)
 
-### 1) Non-linear Tipping as Bias Increases
-As article bias shifts, model preferences **flip** (MacOS → Windows), showing **non-linear tipping behavior** rather than smooth linear change.
-
-### 2) Tool-grounded Pipelines Amplify Bias More Strongly
-Tipping dynamics differ significantly by grounding strategy:
-- Tool-grounded context shows a **steeper tipping curve** centered near neutrality  
-- Direct injection produces a noticeably **weaker** response shift  
-
-This indicates tool-augmented pipelines can increase sensitivity to biased sources.
-
-### 3) Bias-aligned Clustering in Network Structure
-Network visualizations show:
-- distinct MacOS-leaning vs Windows-leaning clusters  
-- dense connections within clusters, sparse connections across opposing biases  
-- structure stronger than expected under random edge assignment.
+### Notes (brief)
+1) **Tipping behavior:** shifts are abrupt rather than linear as bias grows.  
+2) **Delivery matters:** tool-grounded runs show stronger sensitivity to biased context.  
+3) **Network view:** outcomes cluster by bias direction more than a random baseline.
 
 ---
 
 ## 🧪 Model Configuration
 - **Model:** Qwen 3 (0.6B)  
-- Prompting encourages one-sentence outputs to align with candidate scoring templates  
+- Prompting encourages **one-sentence** outputs (consistent scoring)
 - Reasoning traces disabled to reduce noise and simplify scoring/parsing.
-
+  
 ---
 
 ## 📊 Technical Stack
 - **LLM / Inference:** HuggingFace Transformers  
 - **Scoring:** SentenceTransformers (`all-MiniLM-L6-v2`), cosine similarity  
-- **Data modeling:** Python dataclasses for structured experiment inputs/outputs  
-- **Graphs:** NetworkX (construction + metrics)  
+- **Graphs:** NetworkX (construction + metrics)
 - **Visualization:** Gephi (final network exploration + presentation visuals)
 
 ---
 
-## 💡 Professional Impact
-This project supports reliability evaluation for tool-augmented LLM workflows (e.g., RAG/search):
-- provides a reproducible pattern for measuring **bias sensitivity** and **tipping thresholds**  
-- shows that context delivery (tools vs direct injection) can materially change robustness  
-- helps frame risk discussions for production systems when external knowledge sources are biased or fallible.
+## 💡 Why This Matters
+This work provides a reproducible evaluation pattern for tool-augmented LLM systems (e.g., RAG/search): 
+- measures **bias sensitivity** and identifies **tipping thresholds**
+- shows delivery mechanisms (tools vs direct) can materially change robustness
+- supports risk discussions for production workflows when external sources are biased or unreliable
+
+
